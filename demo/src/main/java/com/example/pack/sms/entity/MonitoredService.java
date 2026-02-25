@@ -18,6 +18,10 @@ public class MonitoredService {
     private Double healthScore;
 
     private String status;
-    // HEALTHY, DEGRADED, UNHEALTHY
-}
 
+    private String apiKey;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
+}
