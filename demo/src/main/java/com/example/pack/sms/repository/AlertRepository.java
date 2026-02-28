@@ -21,4 +21,5 @@ public interface AlertRepository extends JpaRepository<Alert, Long> {
     long countByServiceUserAndStatus(User user, String status);
 
     List<Alert> findByServiceUser(User user);
+
 }

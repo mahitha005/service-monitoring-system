@@ -7,20 +7,21 @@ import lombok.*;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class MonitoringRule {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private double maxResponseTime;
+    private String metricType;
+    private String operator;
+    private Double threshold;
 
-    private int maxFailureCount;
+    private Integer breachCountLimit;  // when to alert
 
-    private double minHealthScore;
+    private Integer currentBreachCount = 0;  // 🔥 NEW
 
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "service_id")
     private MonitoredService service;
 }

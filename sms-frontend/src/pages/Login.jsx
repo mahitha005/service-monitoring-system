@@ -13,7 +13,7 @@ function Login() {
       localStorage.setItem("token", response.data);
       navigate("/dashboard");
     } catch (error) {
-      alert("Login failed");
+      alert(error.response?.data || "Login failed");
     }
   };
 
@@ -34,6 +34,15 @@ function Login() {
           onKeyPress={(e) => e.key === 'Enter' && login()}
         />
         <button onClick={login}>Login</button>
+        <p style={{ marginTop: "10px" }}>
+          Don’t have an account?
+          <span
+            style={{ color: "blue", cursor: "pointer", marginLeft: "5px" }}
+            onClick={() => navigate("/register")}
+          >
+            Register
+          </span>
+        </p>
       </div>
     </div>
   );

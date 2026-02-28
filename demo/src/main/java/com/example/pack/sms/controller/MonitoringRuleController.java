@@ -1,11 +1,12 @@
 package com.example.pack.sms.controller;
 
-import com.example.pack.sms.entity.MonitoredService;
-import com.example.pack.sms.entity.MonitoringRule;
-import com.example.pack.sms.repository.MonitoredServiceRepository;
-import com.example.pack.sms.repository.MonitoringRuleRepository;
+import com.example.pack.sms.entity.*;
+import com.example.pack.sms.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/rules")
@@ -14,27 +15,41 @@ public class MonitoringRuleController {
 
     private final MonitoringRuleRepository ruleRepository;
     private final MonitoredServiceRepository serviceRepository;
+    private final UserRepository userRepository;
 
     @PostMapping("/{serviceId}")
-    public String createRule(@PathVariable Long serviceId,
-                             @RequestBody MonitoringRule rule) {
+    public MonitoringRule createRule(@PathVariable Long serviceId,
+                                     @RequestBody MonitoringRule rule,
+                                     Authentication authentication) {
+
+        User user = userRepository.findByUsername(authentication.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
         MonitoredService service = serviceRepository.findById(serviceId)
                 .orElseThrow(() -> new RuntimeException("Service not found"));
 
-        rule.setService(service);
-        ruleRepository.save(rule);
+        if (!service.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("Unauthorized");
+        }
 
-        return "Rule configured successfully";
+        rule.setService(service);
+        return ruleRepository.save(rule);
     }
 
     @GetMapping("/{serviceId}")
-    public MonitoringRule getRule(@PathVariable Long serviceId) {
+    public List<MonitoringRule> getRules(@PathVariable Long serviceId,
+                                         Authentication authentication) {
+
+        User user = userRepository.findByUsername(authentication.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
         MonitoredService service = serviceRepository.findById(serviceId)
                 .orElseThrow(() -> new RuntimeException("Service not found"));
 
-        return ruleRepository.findByService(service)
-                .orElseThrow(() -> new RuntimeException("Rule not found"));
+        if (!service.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("Unauthorized");
+        }
+
+        return ruleRepository.findByService(service);
     }
 }

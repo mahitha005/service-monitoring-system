@@ -1,6 +1,6 @@
 package com.example.pack.sms.controller;
 
-import com.example.pack.sms.entity.Metric;
+import com.example.pack.sms.dto.MetricDTO;
 import com.example.pack.sms.service.MetricService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -15,9 +15,9 @@ public class MetricController {
     @PostMapping
     public String addMetric(
             @RequestHeader("X-API-KEY") String apiKey,
-            @RequestBody Metric metric) {
+            @RequestBody MetricDTO metricDTO) {
 
-        metricService.addMetricByApiKey(apiKey, metric);
+        metricService.addMetricByApiKey(apiKey, metricDTO);
 
         return "Metric recorded successfully";
     }

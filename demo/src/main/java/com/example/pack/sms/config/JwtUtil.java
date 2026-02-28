@@ -7,12 +7,15 @@ import org.springframework.stereotype.Component;
 import java.security.Key;
 import java.util.Date;
 
+import static javax.crypto.Cipher.SECRET_KEY;
+
 @Component
 public class JwtUtil {
 
     private final String SECRET = "mysecretkeymysecretkeymysecretkey12";
 
     private final Key key = Keys.hmacShaKeyFor(SECRET.getBytes());
+
 
     public String generateToken(String username) {
         return Jwts.builder()

@@ -1,11 +1,13 @@
 package com.example.pack.sms.service;
 
+import com.example.pack.sms.dto.MetricDTO;
 import com.example.pack.sms.entity.*;
 import com.example.pack.sms.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -16,90 +18,88 @@ public class MetricService {
     private final MonitoredServiceRepository serviceRepository;
     private final AlertRepository alertRepository;
     private final MonitoringRuleRepository ruleRepository;
-    private final EmailService emailService;
     private final MonitoredServiceService monitoredServiceService;
 
-    public void addMetricByApiKey(String apiKey, Metric metric) {
+    public void addMetricByApiKey(String apiKey, MetricDTO metricDTO) {
 
-        MonitoredService service = serviceRepository.findByApiKey(apiKey)
+        MonitoredService service = serviceRepository
+                .findByApiKey(apiKey)
                 .orElseThrow(() -> new RuntimeException("Invalid API Key"));
 
-        MonitoringRule rule = ruleRepository.findByService(service)
-                .orElseThrow(() -> new RuntimeException("Monitoring rule not configured"));
+        processMetric(service, metricDTO);
+    }
 
+    private void processMetric(MonitoredService service, MetricDTO metricDTO) {
+
+        // 1️⃣ Save Metric
+        Metric metric = new Metric();
         metric.setService(service);
+        metric.setResponseTime(metricDTO.getResponseTime());
+        metric.setFailureCount(metricDTO.getFailureCount());
         metric.setTimestamp(LocalDateTime.now());
+
         metricRepository.save(metric);
 
+        // 2️⃣ Calculate Health
         double health = 100
-                - (metric.getResponseTime() / 10)
-                - (metric.getFailureCount() * 5);
+                - (metricDTO.getResponseTime() / 10)
+                - (metricDTO.getFailureCount() * 5);
 
         if (health < 0) health = 0;
 
         monitoredServiceService.updateHealth(service, health);
 
-        if (metric.getResponseTime() > rule.getMaxResponseTime()) {
-            createOrUpdateAlert(service, "RESPONSE_TIME",
-                    "Response time exceeded configured threshold");
-        }
+        // 3️⃣ Apply Rules
+        List<MonitoringRule> rules = ruleRepository.findByService(service);
 
-        if (metric.getFailureCount() > rule.getMaxFailureCount()) {
-            createOrUpdateAlert(service, "FAILURE_COUNT",
-                    "Failure count exceeded configured threshold");
-        }
+        for (MonitoringRule rule : rules) {
 
-        if (health < rule.getMinHealthScore()) {
-            createOrUpdateAlert(service, "LOW_HEALTH",
-                    "Service health below configured threshold");
-        }
-    }
+            double actualValue = switch (rule.getMetricType()) {
+                case "RESPONSE_TIME" -> metricDTO.getResponseTime();
+                case "FAILURE_COUNT" -> (double) metricDTO.getFailureCount();
+                case "HEALTH" -> health;
+                default -> 0;
+            };
 
-    public void addMetric(Long serviceId, Metric metric) {
+            // 🔥 Only continue if threshold condition is satisfied
+            if (!evaluate(actualValue, rule.getOperator(), rule.getThreshold())) {
+                continue;
+            }
 
-        // 1️⃣ Get Service
-        MonitoredService service = serviceRepository.findById(serviceId)
-                .orElseThrow(() -> new RuntimeException("Service not found"));
+            // 4️⃣ Increase breach count only when threshold satisfied
+            int breachCount = rule.getCurrentBreachCount() == null
+                    ? 0
+                    : rule.getCurrentBreachCount();
 
-        // 2️⃣ Get Monitoring Rule
-        MonitoringRule rule = ruleRepository.findByService(service)
-                .orElseThrow(() -> new RuntimeException("Monitoring rule not configured"));
+            breachCount++;
+            rule.setCurrentBreachCount(breachCount);
+            ruleRepository.save(rule);
 
-        // 3️⃣ Save Metric
-        metric.setService(service);
-        metric.setTimestamp(LocalDateTime.now());
-        metricRepository.save(metric);
+            // 5️⃣ Start alert when limit reached
+            Integer limit = rule.getBreachCountLimit();
 
-        // 4️⃣ Calculate Health
-        double health = 100
-                - (metric.getResponseTime() / 10)
-                - (metric.getFailureCount() * 5);
+            if (limit != null && breachCount >= limit) {
 
-        if (health < 0) {
-            health = 0;
-        }
-
-        monitoredServiceService.updateHealth(service, health);
-
-        // 5️⃣ Rule-based Alerts
-
-        if (metric.getResponseTime() > rule.getMaxResponseTime()) {
-            createOrUpdateAlert(service, "RESPONSE_TIME",
-                    "Response time exceeded configured threshold");
-        }
-
-        if (metric.getFailureCount() > rule.getMaxFailureCount()) {
-            createOrUpdateAlert(service, "FAILURE_COUNT",
-                    "Failure count exceeded configured threshold");
-        }
-
-        if (health < rule.getMinHealthScore()) {
-            createOrUpdateAlert(service, "LOW_HEALTH",
-                    "Service health below configured threshold");
+                createOrUpdateAlert(
+                        service,
+                        rule.getMetricType(),
+                        rule.getMetricType() + " threshold breached"
+                );
+            }
         }
     }
 
-    // 🔥 Alert Deduplication Logic
+    private boolean evaluate(double actualValue, String operator, double threshold) {
+        return switch (operator) {
+            case ">" -> actualValue > threshold;
+            case "<" -> actualValue < threshold;
+            case ">=" -> actualValue >= threshold;
+            case "<=" -> actualValue <= threshold;
+            case "==" -> actualValue == threshold;
+            default -> false;
+        };
+    }
+
     private void createOrUpdateAlert(
             MonitoredService service,
             String type,
@@ -132,17 +132,6 @@ public class MetricService {
             alert.setCreatedAt(LocalDateTime.now());
 
             alertRepository.save(alert);
-
-// 🔥 SEND EMAIL
-            String userEmail = service.getUser().getEmail();
-
-            emailService.sendAlertEmail(
-                    userEmail,
-                    "🚨 Service Alert: " + service.getServiceName(),
-                    "Alert Type: " + type +
-                            "\nMessage: " + message +
-                            "\nService: " + service.getServiceName()
-            );
         }
     }
 }
