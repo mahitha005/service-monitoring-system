@@ -5,12 +5,14 @@ WORKDIR /app
 COPY pom.xml .
 RUN mvn -B -q -e -DskipTests dependency:go-offline
 
-COPY src ./src
-RUN mvn -B -DskipTests package
+COPY . .
+
+RUN ./mvnw -B -DskipTests package
 
 FROM eclipse-temurin:21-jre
 
 WORKDIR /app
+
 COPY --from=build /app/target/*.jar app.jar
 
 EXPOSE 8080
