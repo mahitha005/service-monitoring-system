@@ -13,16 +13,35 @@ public class EmailService {
     private final JavaMailSender mailSender;
 
     @Value("${spring.mail.username}")
-    private String fromEmail;   // 🔥 important
+    private String fromEmail;
 
     public void sendOtpEmail(String toEmail, String otp) {
 
         SimpleMailMessage message = new SimpleMailMessage();
 
-        message.setFrom(fromEmail);   // 🔥 THIS FIXES YOUR ERROR
+        message.setFrom(fromEmail);
         message.setTo(toEmail);
         message.setSubject("OTP Verification - Monitoring System");
         message.setText("Your OTP is: " + otp + "\nIt is valid for 5 minutes.");
+
+        mailSender.send(message);
+    }
+
+    public void sendAlertEmail(String to, String serviceName, String messageText) {
+
+        SimpleMailMessage message = new SimpleMailMessage();
+
+        message.setFrom(fromEmail);
+
+        message.setTo(to);
+        message.setSubject("⚠ ALERT: Issue detected in " + serviceName);
+
+        message.setText(
+                "Service Monitoring Alert\n\n" +
+                        "Service: " + serviceName + "\n" +
+                        "Issue: " + messageText + "\n\n" +
+                        "Please check the monitoring dashboard."
+        );
 
         mailSender.send(message);
     }

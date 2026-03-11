@@ -19,6 +19,7 @@ public class MetricService {
     private final AlertRepository alertRepository;
     private final MonitoringRuleRepository ruleRepository;
     private final MonitoredServiceService monitoredServiceService;
+    private final EmailService emailService;
 
     public void addMetricByApiKey(String apiKey, MetricDTO metricDTO) {
 
@@ -31,8 +32,9 @@ public class MetricService {
 
     private void processMetric(MonitoredService service, MetricDTO metricDTO) {
 
-        // 1️⃣ Save Metric
+        // 1️⃣ Save metric
         Metric metric = new Metric();
+
         metric.setService(service);
         metric.setResponseTime(metricDTO.getResponseTime());
         metric.setFailureCount(metricDTO.getFailureCount());
@@ -40,7 +42,7 @@ public class MetricService {
 
         metricRepository.save(metric);
 
-        // 2️⃣ Calculate Health
+        // 2️⃣ Calculate health
         double health = 100
                 - (metricDTO.getResponseTime() / 10)
                 - (metricDTO.getFailureCount() * 5);
@@ -49,7 +51,7 @@ public class MetricService {
 
         monitoredServiceService.updateHealth(service, health);
 
-        // 3️⃣ Apply Rules
+        // 3️⃣ Apply monitoring rules
         List<MonitoringRule> rules = ruleRepository.findByService(service);
 
         for (MonitoringRule rule : rules) {
@@ -61,23 +63,25 @@ public class MetricService {
                 default -> 0;
             };
 
-            // 🔥 Only continue if threshold condition is satisfied
+            // ❌ If threshold condition not satisfied → skip
             if (!evaluate(actualValue, rule.getOperator(), rule.getThreshold())) {
                 continue;
             }
 
-            // 4️⃣ Increase breach count only when threshold satisfied
+            // 4️⃣ Increase breach counter
             int breachCount = rule.getCurrentBreachCount() == null
                     ? 0
                     : rule.getCurrentBreachCount();
 
             breachCount++;
+
             rule.setCurrentBreachCount(breachCount);
+
             ruleRepository.save(rule);
 
-            // 5️⃣ Start alert when limit reached
             Integer limit = rule.getBreachCountLimit();
 
+            // 🚨 Only create alert when limit reached
             if (limit != null && breachCount >= limit) {
 
                 createOrUpdateAlert(
@@ -90,6 +94,7 @@ public class MetricService {
     }
 
     private boolean evaluate(double actualValue, String operator, double threshold) {
+
         return switch (operator) {
             case ">" -> actualValue > threshold;
             case "<" -> actualValue < threshold;
@@ -115,7 +120,9 @@ public class MetricService {
 
         if (existingAlert.isPresent()) {
 
+            // Alert already exists → increase count
             Alert alert = existingAlert.get();
+
             alert.setCount(alert.getCount() + 1);
             alert.setCreatedAt(LocalDateTime.now());
 
@@ -123,7 +130,9 @@ public class MetricService {
 
         } else {
 
+            // Create new alert
             Alert alert = new Alert();
+
             alert.setService(service);
             alert.setType(type);
             alert.setMessage(message);
@@ -132,6 +141,13 @@ public class MetricService {
             alert.setCreatedAt(LocalDateTime.now());
 
             alertRepository.save(alert);
+
+            // 📧 Send email notification
+            emailService.sendAlertEmail(
+                    service.getUser().getEmail(),
+                    service.getServiceName(),
+                    message
+            );
         }
     }
 }
