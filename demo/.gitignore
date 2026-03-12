@@ -44,3 +44,6 @@ build/
 # Environment
 .env
 application.properties
+
+node_modules
+target
