@@ -21,19 +21,28 @@ public class AuthService {
 
     public User register(User user) {
 
+        // Check if username already exists
+        if (userRepository.findByUsername(user.getUsername()).isPresent()) {
+            throw new RuntimeException("Username already exists");
+        }
+
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         user.setRole("ROLE_USER");
         user.setVerified(false);
 
-        // 🔥 Generate OTP
+        // Generate OTP
         String otp = generateOtp();
         user.setOtp(otp);
         user.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
 
         User savedUser = userRepository.save(user);
 
-        // 🔥 Send OTP Email
-        emailService.sendOtpEmail(savedUser.getEmail(), otp);
+        // Send OTP email (do not fail registration if email fails)
+        try {
+            emailService.sendOtpEmail(savedUser.getEmail(), otp);
+        } catch (Exception e) {
+            System.out.println("Email sending failed but user registered");
+        }
 
         return savedUser;
     }
@@ -85,4 +94,5 @@ public class AuthService {
 
         return "Account verified successfully";
     }
+
 }
