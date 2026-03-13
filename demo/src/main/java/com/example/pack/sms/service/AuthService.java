@@ -38,11 +38,19 @@ public class AuthService {
         User savedUser = userRepository.save(user);
 
         // Send OTP email (do not fail registration if email fails)
+//        try {
+//            emailService.sendOtpEmail(savedUser.getEmail(), otp);
+//        } catch (Exception e) {
+//            System.out.println("Email sending failed but user registered");
+//        }
+
         try {
             emailService.sendOtpEmail(savedUser.getEmail(), otp);
         } catch (Exception e) {
-            System.out.println("Email sending failed but user registered");
+            throw new RuntimeException("OTP email failed to send");
         }
+
+
 
         return savedUser;
     }
