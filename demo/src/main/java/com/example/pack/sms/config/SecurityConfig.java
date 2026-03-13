@@ -51,7 +51,7 @@ public class SecurityConfig {
                 List.of("GET","POST","PUT","DELETE","OPTIONS")
         );
 
-        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowedHeaders(List.of("*")); //access all
 
         configuration.setAllowCredentials(true);
 
