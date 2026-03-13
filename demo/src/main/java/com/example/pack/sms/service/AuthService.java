@@ -21,36 +21,30 @@ public class AuthService {
 
     public User register(User user) {
 
-        // Check if username already exists
+        // check if username exists
         if (userRepository.findByUsername(user.getUsername()).isPresent()) {
             throw new RuntimeException("Username already exists");
         }
 
+        // encode password
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         user.setRole("ROLE_USER");
         user.setVerified(false);
 
-        // Generate OTP
+        // generate OTP
         String otp = generateOtp();
         user.setOtp(otp);
         user.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
 
+        // save user
         User savedUser = userRepository.save(user);
 
-        // Send OTP email (do not fail registration if email fails)
-//        try {
-//            emailService.sendOtpEmail(savedUser.getEmail(), otp);
-//        } catch (Exception e) {
-//            System.out.println("Email sending failed but user registered");
-//        }
-
+        // send email but do not fail registration if email fails
         try {
             emailService.sendOtpEmail(savedUser.getEmail(), otp);
         } catch (Exception e) {
-            throw new RuntimeException("OTP email failed to send");
+            System.out.println("Email sending failed but registration continues");
         }
-
-
 
         return savedUser;
     }
