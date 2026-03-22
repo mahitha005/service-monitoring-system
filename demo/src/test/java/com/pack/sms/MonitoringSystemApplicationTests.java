@@ -1,4 +1,4 @@
-package com.pack.sms;
+package com.example.pack.sms;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

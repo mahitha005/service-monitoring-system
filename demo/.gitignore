@@ -43,4 +43,4 @@ build/
 
 # Environment
 .env
-application.properties
+application-local.properties
