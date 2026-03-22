@@ -55,6 +55,7 @@ public class SecurityConfig {
 
         // Allow frontend (Vercel + local dev)
         configuration.setAllowedOriginPatterns(List.of(
+                "https://service-monitoring-system.onrender.com",
                 "https://*.vercel.app",
                 "http://localhost:5173"
         ));
