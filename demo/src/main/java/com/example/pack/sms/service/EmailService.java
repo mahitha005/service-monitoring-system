@@ -44,7 +44,7 @@ public class EmailService {
             emailData.put("accessToken", privateKey);
             
             Map<String, Object> templateParams = new HashMap<>();
-            templateParams.put("to_email", toEmail);
+            templateParams.put("email", toEmail);
             templateParams.put("otp_code", otp);
             
             emailData.put("template_params", templateParams);
@@ -83,7 +83,7 @@ public class EmailService {
             emailData.put("accessToken", privateKey);
             
             Map<String, Object> templateParams = new HashMap<>();
-            templateParams.put("to_email", to);
+            templateParams.put("email", to);
             templateParams.put("subject", "⚠ ALERT: Issue detected in " + serviceName);
             templateParams.put("message", "Service Monitoring Alert\n\n" +
                                         "Service: " + serviceName + "\n" +
