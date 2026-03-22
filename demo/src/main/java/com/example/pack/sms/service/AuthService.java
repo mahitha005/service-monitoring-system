@@ -21,6 +21,16 @@ public class AuthService {
 
     public User register(User user) {
         try {
+            // Check if username already exists
+            if (userRepository.findByUsername(user.getUsername()).isPresent()) {
+                throw new RuntimeException("Username already exists");
+            }
+            
+            // Check if email already exists
+            if (userRepository.findByEmail(user.getEmail()).isPresent()) {
+                throw new RuntimeException("Email already registered");
+            }
+            
             user.setPassword(passwordEncoder.encode(user.getPassword()));
             user.setRole("ROLE_USER");
             user.setVerified(false);
