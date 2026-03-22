@@ -24,6 +24,9 @@ public class EmailService {
     
     @Value("${emailjs.public.key}")
     private String publicKey;
+    
+    @Value("${emailjs.private.key}")
+    private String privateKey;
 
     private final RestTemplate restTemplate = new RestTemplate();
 
@@ -38,6 +41,7 @@ public class EmailService {
             emailData.put("service_id", serviceId);
             emailData.put("template_id", otpTemplateId);
             emailData.put("user_id", publicKey);
+            emailData.put("accessToken", privateKey);
             
             Map<String, Object> templateParams = new HashMap<>();
             templateParams.put("to_email", toEmail);
@@ -76,6 +80,7 @@ public class EmailService {
             emailData.put("service_id", serviceId);
             emailData.put("template_id", alertTemplateId);
             emailData.put("user_id", publicKey);
+            emailData.put("accessToken", privateKey);
             
             Map<String, Object> templateParams = new HashMap<>();
             templateParams.put("to_email", to);
