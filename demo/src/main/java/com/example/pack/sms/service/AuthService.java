@@ -20,22 +20,26 @@ public class AuthService {
     private final EmailService emailService;
 
     public User register(User user) {
+        try {
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
+            user.setRole("ROLE_USER");
+            user.setVerified(false);
 
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
-        user.setRole("ROLE_USER");
-        user.setVerified(false);
+            // 🔥 Generate OTP
+            String otp = generateOtp();
+            user.setOtp(otp);
+            user.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
 
-        // 🔥 Generate OTP
-        String otp = generateOtp();
-        user.setOtp(otp);
-        user.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
+            User savedUser = userRepository.save(user);
 
-        User savedUser = userRepository.save(user);
+            // 🔥 Send OTP Email
+            emailService.sendOtpEmail(savedUser.getEmail(), otp);
 
-        // 🔥 Send OTP Email
-        emailService.sendOtpEmail(savedUser.getEmail(), otp);
-
-        return savedUser;
+            return savedUser;
+            
+        } catch (Exception e) {
+            throw new RuntimeException("Registration failed: " + e.getMessage());
+        }
     }
 
     public String login(String username, String password) {
